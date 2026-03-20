@@ -21,6 +21,19 @@ def init_connection() -> sqlite3.Connection:
     return conn
 
 
+skip_tables = [
+    'CommodityLabel',
+    'TechnologyLabel',
+    'DataSourceLabel',
+    'SeasonLabel',
+    'SectorLabel',
+    'TimeSeason',
+    'TimeSegmentFraction',
+    'TimeSeasonSequential',
+    'TimeOfDay'
+]
+
+
 def merge(merge_db: str):
 
     print(f'\nAttempting to merge {merge_db} into {main_db}...\n')
@@ -32,7 +45,10 @@ def merge(merge_db: str):
     conn = sqlite3.connect(merge_db)
     curs = conn.cursor()
 
-    merge_tables = [t[0] for t in curs.execute('SELECT name FROM sqlite_master WHERE type="table";').fetchall()]
+    merge_tables = [
+        t[0] for t in curs.execute('SELECT name FROM sqlite_master WHERE type="table";').fetchall()
+        if t[0] not in skip_tables
+    ]
 
     abort = False
 
@@ -89,14 +105,8 @@ def merge(merge_db: str):
     curs.execute('PRAGMA FOREIGN_KEYS = 0;')
     conn.execute(f'ATTACH "{merge_db}" AS merge_db')
 
-    tables = [
-        t[0]
-        for t in curs.execute('SELECT name FROM sqlite_master WHERE type="table";').fetchall()
-        if t[0] in merge_tables
-    ]
-
-    for i, table in enumerate(tables):
-        print(f'\rTransferring {table}, table {i}/{len(tables)-1}...         ', end='')
+    for i, table in enumerate(merge_tables):
+        print(f'\rTransferring {table}, table {i}/{len(merge_tables)-1}...         ', end='')
         cols = [c[1] for c in curs.execute(f'PRAGMA table_info({table});')]
         if 'data_id' in cols:
             try:
@@ -115,6 +125,7 @@ def merge(merge_db: str):
     # as we may have multiple variants of each of these
     curs.execute('INSERT OR IGNORE INTO CommodityLabel(commodity) SELECT name FROM Commodity')
     curs.execute('INSERT OR IGNORE INTO TechnologyLabel(tech) SELECT tech FROM Technology')
+    curs.execute('INSERT OR IGNORE INTO SectorLabel(sector) SELECT sector FROM Technology')
     curs.execute('INSERT OR IGNORE INTO DataSourceLabel(source_id) SELECT source_id FROM DataSource')
     
     print('\nChecking foreign key integrity...')
