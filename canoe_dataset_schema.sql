@@ -946,9 +946,9 @@ CREATE TABLE IF NOT EXISTS LimitActivityShare
 CREATE TABLE IF NOT EXISTS LimitAnnualCapacityFactor
 (
     region      TEXT,
-    period      INTEGER
-        REFERENCES TimePeriod (period),
     tech        TEXT,
+    vintage      INTEGER
+        REFERENCES TimePeriod (period),
     output_comm TEXT,
     operator	TEXT  NOT NULL DEFAULT "le"
     	REFERENCES Operator (operator),
@@ -970,7 +970,7 @@ CREATE TABLE IF NOT EXISTS LimitAnnualCapacityFactor
     FOREIGN KEY (data_source) REFERENCES DataSourceLabel (source_id),
     FOREIGN KEY (tech) REFERENCES TechnologyLabel (tech),
     FOREIGN KEY (output_comm) REFERENCES CommodityLabel (commodity),
-    PRIMARY KEY (region, period, tech, output_comm, operator, data_id),
+    PRIMARY KEY (region, tech, vintage, output_comm, operator, data_id),
     CHECK (factor >= 0 AND factor <= 1)
 );
 CREATE TABLE IF NOT EXISTS LimitCapacity
@@ -1396,6 +1396,19 @@ CREATE TABLE IF NOT EXISTS ReserveCapacityDerate
     PRIMARY KEY (region, period, season, tech, vintage, data_id),
     CHECK (factor >= 0 AND factor <= 1)
 );
+CREATE TABLE IF NOT EXISTS TimeSegmentFraction
+(   
+    period INTEGER
+        REFERENCES TimePeriod (period),
+    season TEXT
+        REFERENCES SeasonLabel (season),
+    tod     TEXT
+        REFERENCES TimeOfDay (tod),
+    segfrac REAL,
+    notes   TEXT,
+    PRIMARY KEY (period, season, tod),
+    CHECK (segfrac >= 0 AND segfrac <= 1)
+);
 CREATE TABLE IF NOT EXISTS StorageDuration
 (
     region   TEXT,
@@ -1483,6 +1496,35 @@ CREATE TABLE IF NOT EXISTS TimePeriod
         PRIMARY KEY,
     flag     TEXT
         REFERENCES TimePeriodType (label)
+);
+REPLACE INTO TimePeriod VALUES (0, 2025, 'f');
+REPLACE INTO TimePeriod VALUES (1, 2030, 'f');
+REPLACE INTO TimePeriod VALUES (2, 2035, 'f');
+REPLACE INTO TimePeriod VALUES (3, 2040, 'f');
+REPLACE INTO TimePeriod VALUES (4, 2045, 'f');
+REPLACE INTO TimePeriod VALUES (5, 2050, 'f');
+CREATE TABLE IF NOT EXISTS TimeSeason
+(
+    period INTEGER
+        REFERENCES TimePeriod (period),
+    sequence INTEGER,
+    season TEXT
+        REFERENCES SeasonLabel (season),
+    notes TEXT,
+    PRIMARY KEY (period, sequence, season)
+);
+CREATE TABLE IF NOT EXISTS TimeSeasonSequential
+(
+    period INTEGER
+        REFERENCES TimePeriod (period),
+    sequence INTEGER,
+    seas_seq TEXT,
+    season TEXT
+        REFERENCES SeasonLabel (season),
+    num_days REAL NOT NULL,
+    notes TEXT,
+    PRIMARY KEY (period, sequence, seas_seq, season),
+    CHECK (num_days > 0)
 );
 CREATE TABLE IF NOT EXISTS TimePeriodType
 (
